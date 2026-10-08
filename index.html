@@ -132,6 +132,10 @@ details.card[open] summary::after{content:"−"}
       <div class="stepper"><button id="k-minus" aria-label="פחות מרגלים">−</button><output id="k-out">1</output><button id="k-plus" aria-label="יותר מרגלים">+</button></div>
     </div>
     <div class="row">
+      <span class="label">טיימר</span>
+      <button class="btn ghost small" id="t-toggle" aria-pressed="true">פועל</button>
+    </div>
+    <div class="row" id="minutes-row">
       <span class="label">דקות לסבב</span>
       <div class="stepper"><button id="m-minus" aria-label="פחות דקות">−</button><output id="m-out">8</output><button id="m-plus" aria-label="יותר דקות">+</button></div>
     </div>
@@ -153,6 +157,11 @@ details.card[open] summary::after{content:"−"}
 
   <section id="timer-card" class="card" hidden>
     <div class="timer" id="timer">--:--</div>
+    <p class="hint" id="timer-note" style="text-align:center" hidden></p>
+    <div class="btns" id="timer-host" hidden>
+      <button class="btn ghost" id="t-pause">השהה</button>
+      <button class="btn ghost" id="t-cancel">בטל טיימר</button>
+    </div>
     <button class="btn" id="reveal-btn" hidden>סיים וחשוף את המרגלים</button>
   </section>
 

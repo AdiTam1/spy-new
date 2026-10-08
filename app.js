@@ -166,7 +166,7 @@ function hostCreate(name) {
   room = {
     code, status: "lobby", round: 0,
     spies: 1, spiesManual: false, minutes: 8, minutesManual: false,
-    endsAt: null, location: null, spyIds: [],
+    endsAt: null, pausedLeft: null, timerOn: true, location: null, spyIds: [],
     players: [{ id: playerId, name, pub: myPubJwk, lastSeen: Date.now(), inRound: false }],
   };
   session = { code, host: true };
@@ -192,6 +192,7 @@ function hostPublicState() {
     spies: room.spies, maxSpies: maxSpies(nn), recSpies: recSpies(nn),
     minutes: room.minutes, recMinutes: recMinutes(nn),
     maxPlayers: MAX_PLAYERS, minPlayers: MIN_PLAYERS, endsAt: room.endsAt,
+    timerOn: room.timerOn !== false, pausedLeft: room.pausedLeft ?? null,
     reveal: room.status === "reveal" ? { location: room.location, spyIds: room.spyIds } : null,
   };
 }
@@ -285,13 +286,27 @@ const host = {
     room.players.forEach((p) => (p.inRound = true));
     room.status = "playing";
     room.round += 1;
-    room.endsAt = Date.now() + room.minutes * 60000;
+    room.timerOn = room.timerOn !== false;
+    room.endsAt = room.timerOn ? Date.now() + room.minutes * 60000 : null;
+    room.pausedLeft = null;
     hostCommit();
     room.players.forEach(hostSendRole);
   },
-  reveal() { if (room.status !== "playing") return; room.status = "reveal"; room.endsAt = null; hostCommit(); },
+  reveal() { if (room.status !== "playing") return; room.status = "reveal"; room.endsAt = null; room.pausedLeft = null; hostCommit(); },
+  toggleTimer() { if (room.status !== "lobby") return; room.timerOn = room.timerOn === false; hostCommit(); },
+  pauseTimer() {
+    if (room.status !== "playing" || !room.timerOn) return;
+    if (room.pausedLeft != null) { room.endsAt = Date.now() + room.pausedLeft; room.pausedLeft = null; }
+    else if (room.endsAt) { room.pausedLeft = Math.max(0, room.endsAt - Date.now()); room.endsAt = null; }
+    hostCommit();
+  },
+  cancelTimer() {
+    if (room.status !== "playing") return;
+    room.endsAt = null; room.pausedLeft = null; room.timerOn = false;
+    hostCommit();
+  },
   lobby() {
-    room.status = "lobby"; room.endsAt = null; room.spyIds = [];
+    room.status = "lobby"; room.endsAt = null; room.pausedLeft = null; room.spyIds = [];
     room.players.forEach((p) => { p.inRound = false; pub(topic(room.code, "u", p.id), null, true); });
     hostAutoTune(); hostCommit();
   },
@@ -393,6 +408,9 @@ function render() {
       $("k-out").value = s.spies;
       $("k-minus").disabled = s.spies <= 1;
       $("k-plus").disabled = s.spies >= s.maxSpies;
+      $("t-toggle").textContent = s.timerOn ? "פועל" : "כבוי";
+      $("t-toggle").setAttribute("aria-pressed", s.timerOn);
+      $("minutes-row").hidden = !s.timerOn;
       $("m-out").value = s.minutes;
       $("m-minus").disabled = s.minutes <= 2;
       $("m-plus").disabled = s.minutes >= 30;
@@ -405,12 +423,18 @@ function render() {
       $("start").disabled = n < s.minPlayers;
     } else {
       $("guest-panel").hidden = false;
-      $("guest-info").textContent = n + " בחדר · " + (s.spies === 1 ? "מרגל אחד" : s.spies + " מרגלים") + " · " + s.minutes + " דקות";
+      $("guest-info").textContent = n + " בחדר · " + (s.spies === 1 ? "מרגל אחד" : s.spies + " מרגלים") + " · " + (s.timerOn ? s.minutes + " דקות" : "ללא טיימר");
     }
   }
   if (s.status === "playing") {
     $("game").hidden = false;
     $("timer-card").hidden = false;
+    $("timer-host").hidden = !s.isHost || !s.timerOn;
+    $("t-pause").textContent = s.pausedLeft != null ? "המשך" : "השהה";
+    $("timer").hidden = !s.timerOn;
+    $("timer-note").hidden = s.timerOn && s.pausedLeft == null;
+    $("timer-note").textContent = !s.timerOn ? "משחקים בלי טיימר" : "הטיימר מושהה";
+    drawTimer();
     $("reveal-btn").hidden = !s.isHost;
     drawFile(s);
   }
@@ -516,6 +540,9 @@ if (urlCode) { setTab(false); $("code").value = urlCode; }
 // ---------- room controls ----------
 $("k-minus").onclick = () => host.setSpies(room.spies - 1);
 $("k-plus").onclick = () => host.setSpies(room.spies + 1);
+$("t-toggle").onclick = () => host.toggleTimer();
+$("t-pause").onclick = () => host.pauseTimer();
+$("t-cancel").onclick = () => host.cancelTimer();
 $("m-minus").onclick = () => host.setMinutes(room.minutes - 1);
 $("m-plus").onclick = () => host.setMinutes(room.minutes + 1);
 $("reset-auto").onclick = () => host.resetAuto();
@@ -551,13 +578,17 @@ $("copy-code").onclick = () => copy(view.code, "הקוד הועתק");
 
 // ---------- timer ----------
 let beeped = 0;
-setInterval(() => {
-  if (!view || view.status !== "playing" || !view.endsAt) return;
-  const left = Math.max(0, Math.round((view.endsAt - Date.now()) / 1000));
+function drawTimer() {
+  if (!view || view.status !== "playing" || !view.timerOn) return;
+  let left;
+  if (view.pausedLeft != null) left = Math.round(view.pausedLeft / 1000);
+  else if (view.endsAt) left = Math.max(0, Math.round((view.endsAt - Date.now()) / 1000));
+  else return;
   $("timer").textContent = String(Math.floor(left / 60)).padStart(2, "0") + ":" + String(left % 60).padStart(2, "0");
   $("timer").classList.toggle("done", left === 0);
   if (left === 0 && beeped !== view.round) { beeped = view.round; beep(); toast("הזמן נגמר. מצביעים!"); }
-}, 250);
+}
+setInterval(drawTimer, 250);
 function beep() {
   try {
     const a = new (window.AudioContext || window.webkitAudioContext)();
