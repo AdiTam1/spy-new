@@ -399,7 +399,8 @@ function render() {
       const recOk = s.spies === s.recSpies && s.minutes === s.recMinutes;
       $("rec-hint").textContent = n < s.minPlayers
         ? "צריך לפחות " + s.minPlayers + " שחקנים. כרגע בחדר: " + n + "."
-        : "ל־" + n + " שחקנים מומלץ " + (s.recSpies === 1 ? "מרגל אחד" : s.recSpies + " מרגלים") + " ו־" + s.recMinutes + " דקות." + (recOk ? " ההמלצה מתעדכנת כשאנשים נכנסים." : "");
+        : "ל־" + n + " שחקנים מומלץ " + (s.recSpies === 1 ? "מרגל אחד" : s.recSpies + " מרגלים") + " ו־" + s.recMinutes + " דקות." + (recOk ? " ההמלצה מתעדכנת כשאנשים נכנסים." : "")
+          + (s.spies >= s.maxSpies ? " עוד מרגל אפשר רק מ־" + (2 * s.maxSpies + 3) + " שחקנים, כדי שהאזרחים יהיו לפחות פי שניים מהמרגלים." : "");
       $("reset-auto").hidden = recOk;
       $("start").disabled = n < s.minPlayers;
     } else {
