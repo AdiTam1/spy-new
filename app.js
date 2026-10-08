@@ -197,7 +197,7 @@ function hostPublicState() {
   };
 }
 function roleFor(p) {
-  return room.spyIds.includes(p.id) ? { round: room.round, spy: true } : { round: room.round, spy: false, location: room.location };
+  return room.spyIds.includes(p.id) ? { round: room.round, spy: true } : { round: room.round, spy: false, location: room.location, job: (room.jobOf || {})[p.id] || null };
 }
 async function hostSendRole(p) {
   if (p.id === playerId || !p.inRound || room.status !== "playing") return;
@@ -279,10 +279,15 @@ const host = {
     room.spies = Math.min(room.spies, maxSpies(n));
     const ids = room.players.map((p) => p.id);
     for (let i = ids.length - 1; i > 0; i--) { const j = randInt(i + 1); [ids[i], ids[j]] = [ids[j], ids[i]]; }
-    room.spyIds = ids.slice(0, room.spies);
     let loc;
     do loc = LOCS[randInt(LOCS.length)]; while (LOCS.length > 1 && loc === room.location);
     room.location = loc;
+    room.spyIds = ids.slice(0, room.spies);
+    // Citizens get a job at the location; jobs repeat only when there are more citizens than jobs.
+    const jobs = (ROLES[loc] || []).slice();
+    for (let i = jobs.length - 1; i > 0; i--) { const j = randInt(i + 1); [jobs[i], jobs[j]] = [jobs[j], jobs[i]]; }
+    room.jobOf = {};
+    ids.slice(room.spies).forEach((id, i) => { if (jobs.length) room.jobOf[id] = jobs[i % jobs.length]; });
     room.players.forEach((p) => (p.inRound = true));
     room.status = "playing";
     room.round += 1;
@@ -481,7 +486,7 @@ function drawFile(s) {
     const others = s.spies - 1;
     f.append(el("div", "stamp", "מרגל"), el("div", "small", others > 0 ? "יש עוד " + (others === 1 ? "מרגל אחד" : others + " מרגלים") + ". גלו את המקום בלי להיחשף." : "גלו את המקום בלי להיחשף."));
   } else {
-    f.append(el("div", "small", "המקום"), el("div", "loc-name", role.location), el("div", "small", s.spies === 1 ? "יש מרגל אחד ביניכם" : "יש " + s.spies + " מרגלים ביניכם"));
+    f.append(el("div", "small", "המקום"), el("div", "loc-name", role.location), ...(role.job ? [el("div", "job", "התפקיד שלך: " + role.job)] : []), el("div", "small", s.spies === 1 ? "יש מרגל אחד ביניכם" : "יש " + s.spies + " מרגלים ביניכם"));
   }
 }
 $("file").onclick = () => {
