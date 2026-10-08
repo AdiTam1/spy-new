@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>המרגל</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karantina:wght@400;700&family=Assistant:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one narrow "case file" column, one card per step, phone-first. */
+:root{
+  --bg:#eceae4;--paper:#f8f7f3;--ink:#1b2230;--muted:#5d6472;--line:#cfccc3;
+  --stamp:#c2362b;--stamp-ink:#fff;--file:#2a3550;--file-ink:#f1efe8;--ok:#2f7a53;
+  --display:"Karantina","Assistant",system-ui,sans-serif;
+  --body:"Assistant",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#12151c;--paper:#1b202a;--ink:#e8e6df;--muted:#9aa1ae;--line:#2f3644;
+  --stamp:#e2554a;--stamp-ink:#140c0b;--file:#d9d4c6;--file-ink:#161a22;--ok:#5fbf8a;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.5;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+[hidden]{display:none!important}
+.wrap{max-width:30rem;margin:0 auto;padding-inline:16px;padding-block:20px 48px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:6px}
+h1{font-family:var(--display);font-weight:700;font-size:3.6rem;line-height:.9;margin:0}
+.tag{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;direction:ltr}
+.status{font-size:.85rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.dot.on{background:var(--ok)}
+
+.tabs{display:grid;grid-template-columns:1fr 1fr;border:2px solid var(--ink);border-radius:4px;overflow:hidden}
+.tabs button{all:unset;cursor:pointer;text-align:center;padding:10px;font-weight:700}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.label{font-size:.8rem;font-weight:700;letter-spacing:.08em;color:var(--muted)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.hint{font-size:.9rem;color:var(--muted);margin:0}
+.err{color:var(--stamp);font-weight:700;margin:0;font-size:.95rem}
+
+input.text{font:inherit;font-size:1.15rem;padding:10px 12px;border:2px solid var(--ink);border-radius:4px;background:var(--bg);color:var(--ink);width:100%}
+input.codein{font-family:var(--mono);font-size:1.8rem;letter-spacing:.18em;text-align:center;direction:ltr;text-transform:uppercase}
+
+.btn{appearance:none;border:none;border-radius:4px;background:var(--stamp);color:var(--stamp-ink);font:700 1.1rem var(--body);padding:13px 16px;cursor:pointer;width:100%}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border:2px solid var(--ink)}
+.btn.small{width:auto;padding:6px 12px;font-size:.95rem}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+:focus-visible{outline:3px solid var(--stamp);outline-offset:2px}
+
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{width:44px;height:44px;border-radius:50%;border:2px solid var(--ink);background:transparent;color:var(--ink);font-size:1.4rem;font-weight:700;cursor:pointer;line-height:1}
+.stepper button:disabled{opacity:.3;cursor:default}
+.stepper output{min-width:2.4ch;text-align:center;font-family:var(--mono);font-size:1.5rem;font-variant-numeric:tabular-nums}
+.bignum{font-family:var(--mono);font-size:1.5rem}
+
+.code{font-family:var(--mono);font-weight:600;font-size:2.6rem;letter-spacing:.18em;text-align:center;direction:ltr;user-select:all;padding:6px 0;border-block:2px dashed var(--line)}
+
+.players{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.players li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);min-width:0}
+.players li:last-child{border-bottom:none}
+.players .name{flex:1;min-width:0;overflow-wrap:anywhere;font-weight:600}
+.players .off .name{color:var(--muted)}
+.badge{font-size:.75rem;font-weight:700;border:1.5px solid currentColor;border-radius:3px;padding:0 6px;color:var(--muted);white-space:nowrap}
+.badge.host{color:var(--stamp)}
+.badge.spy{color:var(--stamp);background:transparent}
+.x{appearance:none;border:none;background:transparent;color:var(--muted);font-size:1.2rem;cursor:pointer;padding:2px 6px}
+.count{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+.file{background:var(--file);color:var(--file-ink);border-radius:6px;padding:22px 18px;min-height:13rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;cursor:pointer;position:relative;user-select:none}
+.file .rnd{position:absolute;top:10px;inset-inline-start:12px;font-family:var(--mono);font-size:.8rem;opacity:.75}
+.file .cover{font-family:var(--display);font-size:2.4rem;line-height:1}
+.file .small{font-size:.95rem;opacity:.85}
+.file .loc-name{font-family:var(--display);font-weight:700;font-size:3.4rem;line-height:1;text-wrap:balance}
+.stamp{font-family:var(--display);font-weight:700;font-size:3.6rem;color:var(--stamp);border:4px solid var(--stamp);padding:2px 18px;transform:rotate(-6deg);line-height:1.05}
+.timer{font-family:var(--mono);font-size:3rem;text-align:center;font-variant-numeric:tabular-nums;direction:ltr}
+.timer.done{color:var(--stamp)}
+
+details.card summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between}
+details.card summary::after{content:"+";font-family:var(--mono)}
+details.card[open] summary::after{content:"−"}
+.locs{display:grid;grid-template-columns:repeat(auto-fill,minmax(8.5rem,1fr));gap:6px;margin-top:12px}
+.loc{appearance:none;text-align:start;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:4px;padding:7px 9px;font:inherit;font-size:.95rem;cursor:pointer;min-width:0}
+.loc.out{text-decoration:line-through;color:var(--muted);opacity:.6}
+.reveal-loc{font-family:var(--display);font-weight:700;font-size:3rem;line-height:1;text-align:center}
+.toast{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:4px;font-weight:700;max-width:90vw;text-align:center}
+@media (prefers-reduced-motion:no-preference){.stamp{animation:thump .25s ease-out}@keyframes thump{from{transform:rotate(-6deg) scale(1.6);opacity:0}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>המרגל</h1>
+    <span class="status"><span class="dot" id="conn-dot"></span><span id="conn-text">מתחבר…</span></span>
+  </header>
+
+  <!-- HOME -->
+  <section id="home" class="card">
+    <label class="label" for="name">השם שלך</label>
+    <input id="name" class="text" maxlength="20" autocomplete="nickname" placeholder="למשל: עדי">
+    <div class="tabs" role="tablist">
+      <button id="tab-create" role="tab" aria-selected="true">פתיחת חדר</button>
+      <button id="tab-join" role="tab" aria-selected="false">הצטרפות</button>
+    </div>
+    <div id="create-pane">
+      <p class="hint">תקבלו קוד וקישור לשלוח לחברים. מספר המרגלים נקבע בזמן שאנשים נכנסים.</p>
+      <button class="btn" id="create" style="margin-top:12px">פתח חדר</button>
+    </div>
+    <div id="join-pane" hidden>
+      <input id="code" class="text codein" maxlength="6" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="קוד" aria-label="קוד חדר">
+      <button class="btn" id="join" style="margin-top:12px">הצטרף</button>
+    </div>
+    <p class="err" id="home-err" hidden></p>
+  </section>
+
+  <!-- LOBBY -->
+  <section id="lobby" class="card" hidden>
+    <span class="label">קוד החדר</span>
+    <div class="code" id="room-code"></div>
+    <div class="btns">
+      <button class="btn ghost" id="copy-link">העתק קישור</button>
+      <button class="btn ghost" id="copy-code">העתק קוד</button>
+    </div>
+  </section>
+
+  <section id="host-panel" class="card" hidden>
+    <div class="row">
+      <span class="label">מרגלים</span>
+      <div class="stepper"><button id="k-minus" aria-label="פחות מרגלים">−</button><output id="k-out">1</output><button id="k-plus" aria-label="יותר מרגלים">+</button></div>
+    </div>
+    <div class="row">
+      <span class="label">דקות לסבב</span>
+      <div class="stepper"><button id="m-minus" aria-label="פחות דקות">−</button><output id="m-out">8</output><button id="m-plus" aria-label="יותר דקות">+</button></div>
+    </div>
+    <p class="hint" id="rec-hint"></p>
+    <button class="btn ghost small" id="reset-auto" hidden>חזור להמלצה</button>
+    <button class="btn" id="start">התחל משחק</button>
+  </section>
+
+  <section id="guest-panel" class="card" hidden>
+    <p style="margin:0;font-weight:700">ממתינים שהמארח יתחיל</p>
+    <p class="hint" id="guest-info"></p>
+  </section>
+
+  <!-- GAME -->
+  <section id="game" hidden>
+    <div class="file" id="file" role="button" tabindex="0"></div>
+    <p class="hint" style="text-align:center;margin-top:8px">הקישו על התיקייה כדי להציג או להסתיר.</p>
+  </section>
+
+  <section id="timer-card" class="card" hidden>
+    <div class="timer" id="timer">--:--</div>
+    <button class="btn" id="reveal-btn" hidden>סיים וחשוף את המרגלים</button>
+  </section>
+
+  <section id="reveal" class="card" hidden>
+    <span class="label">המקום היה</span>
+    <div class="reveal-loc" id="reveal-loc"></div>
+    <span class="label">המרגלים</span>
+    <p id="reveal-spies" style="margin:0;font-weight:700;font-size:1.2rem"></p>
+    <button class="btn" id="new-round" hidden>סבב חדש</button>
+    <p class="hint" id="wait-new" hidden>המארח יפתח סבב חדש.</p>
+  </section>
+
+  <section id="players-card" class="card" hidden>
+    <div class="row"><span class="label">שחקנים</span><span class="count" id="p-count"></span></div>
+    <ul class="players" id="players"></ul>
+    <button class="btn ghost small" id="leave">יציאה מהחדר</button>
+  </section>
+
+  <details class="card" id="loc-card">
+    <summary>רשימת המקומות</summary>
+    <p class="hint" style="margin-top:8px">הקישו על מקום כדי למחוק אותו מהרשימה שלכם.</p>
+    <div class="locs" id="locs"></div>
+  </details>
+
+  <details class="card">
+    <summary>איך משחקים</summary>
+    <ol style="margin:12px 0 0;padding-inline-start:1.2rem;display:flex;flex-direction:column;gap:6px;font-size:.95rem">
+      <li>כולם מקבלים את אותו מקום, חוץ מהמרגלים שלא יודעים אותו.</li>
+      <li>שואלים שאלות בתורות. עונים כך שיהיה ברור שאתם יודעים את המקום, בלי לחשוף אותו.</li>
+      <li>בכל רגע אפשר להאשים שחקן. אם כולם מסכימים, הוא נחשף.</li>
+      <li>מרגל יכול לעצור את המשחק ולנחש את המקום. ניחוש נכון מנצח.</li>
+      <li>כשיש כמה מרגלים, הם לא יודעים מי המרגל השני.</li>
+    </ol>
+  </details>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://unpkg.com/mqtt@5.10.1/dist/mqtt.min.js"></script>
+<script>const LOCATIONS = ["מטוס", "בנק", "חוף הים", "תיאטרון הבימה", "קזינו", "קתדרלה", "אוהל קרקס", "מסיבת חברה", "צלבנים", "ספא", "שגרירות", "בית חולים", "בית מלון", "בסיס צבאי", "אולפן קולנוע", "אוניית נוסעים", "רכבת נוסעים", "ספינת פיראטים", "תחנת מחקר בקוטב", "תחנת משטרה", "מסעדה", "בית ספר", "תחנת שירות דרכים", "תחנת חלל", "צוללת", "סופרמרקט", "אוניברסיטה", "פארק שעשועים", "מוזיאון אמנות", "מפעל ממתקים", "מופע חתולים", "בית עלמין", "מכרה פחם", "אתר בנייה", "כנס גיימינג", "תחנת דלק", "רציף ימי", "אצטדיון הוקי קרח", "כלא", "מועדון ג'אז", "ספרייה", "מועדון לילה", "מסלול מרוץ", "בית אבות", "הופעת רוק", "אוטובוס סיורים", "אצטדיון", "רכבת תחתית", "האומות המאוחדות", "כרם", "חתונה", "חוות חיות"];</script>
+<script src="app.js"></script>
+</body>
+</html>
